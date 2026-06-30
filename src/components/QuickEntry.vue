@@ -1,17 +1,11 @@
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { supabase } from '../lib/supabase'
+import { useDailyLog } from '../composables/useDailyLog'
 
-// Today's date in the user's *local* zone as YYYY-MM-DD. We send this
-// explicitly rather than leaning on the DB's current_date default (which is
-// UTC and could roll to "tomorrow" late at night), and the upsert matches the
-// existing row on (user_id, entry_date) using it.
-function todayLocal() {
-  const now = new Date()
-  const tzOffsetMs = now.getTimezoneOffset() * 60000
-  return new Date(now - tzOffsetMs).toISOString().slice(0, 10)
-}
-const today = todayLocal()
+// Reads flow through the shared cache; `today` (local YYYY-MM-DD) and refresh()
+// come from there too, so this writer and the readers agree on one "today".
+const { today, todayRow, refresh } = useDailyLog()
 
 const form = reactive({
   weight_lbs: '',
@@ -21,7 +15,7 @@ const form = reactive({
   workout_done: false,
 })
 
-const status = ref('idle') // 'idle' | 'loading' | 'saving' | 'saved' | 'error'
+const status = ref('idle') // 'idle' | 'saving' | 'saved' | 'error'
 const errorMsg = ref(null)
 const savedRow = ref(null)
 
@@ -29,37 +23,37 @@ const savedRow = ref(null)
 // so blanks become null (every metric column is nullable by design).
 const numOrNull = (v) => (v === '' || v === null ? null : Number(v))
 
-onMounted(loadToday)
-
-async function loadToday() {
-  status.value = 'loading'
-  // No user_id filter: RLS scopes the read to the logged-in owner for us.
-  // maybeSingle() = "0 or 1 row" — null when today hasn't been logged yet.
-  const { data, error } = await supabase
-    .from('daily_log')
-    .select('*')
-    .eq('entry_date', today)
-    .maybeSingle()
-
-  if (error) {
-    status.value = 'error'
-    errorMsg.value = error.message
-    return
-  }
-  if (data) {
-    form.weight_lbs = data.weight_lbs ?? ''
-    form.steps = data.steps ?? ''
-    form.calories = data.calories ?? ''
-    form.protein_g = data.protein_g ?? ''
-    form.workout_done = data.workout_done
-    savedRow.value = data
-  }
-  status.value = 'idle'
-}
+// Pre-fill the form whenever today's row loads or changes (e.g. after refresh).
+watch(
+  todayRow,
+  (row) => {
+    if (!row) return
+    form.weight_lbs = row.weight_lbs ?? ''
+    form.steps = row.steps ?? ''
+    form.calories = row.calories ?? ''
+    form.protein_g = row.protein_g ?? ''
+    form.workout_done = row.workout_done
+    savedRow.value = row
+  },
+  { immediate: true }
+)
 
 async function save() {
   status.value = 'saving'
   errorMsg.value = null
+
+  // Read current goals to FREEZE into this day's row — the intentional snapshot
+  // ("the bar judged against then"). RLS scopes to the owner; one row at most.
+  const { data: goals, error: goalsError } = await supabase
+    .from('goals')
+    .select('step_goal, calorie_goal, protein_goal')
+    .maybeSingle()
+
+  if (goalsError) {
+    status.value = 'error'
+    errorMsg.value = goalsError.message
+    return
+  }
 
   const payload = {
     entry_date: today,
@@ -68,6 +62,10 @@ async function save() {
     calories: numOrNull(form.calories),
     protein_g: numOrNull(form.protein_g),
     workout_done: form.workout_done,
+    // Frozen goal snapshot (null if goals aren't set yet).
+    step_goal: goals?.step_goal ?? null,
+    calorie_goal: goals?.calorie_goal ?? null,
+    protein_goal: goals?.protein_goal ?? null,
     // No user_id: default auth.uid() stamps the owner from the verified login.
   }
 
@@ -86,6 +84,8 @@ async function save() {
   }
   savedRow.value = data
   status.value = 'saved'
+  // Update the shared cache so StatusCards (streak + vs-goal) reflect the save.
+  await refresh()
 }
 </script>
 
@@ -141,13 +141,12 @@ async function save() {
       <div class="col-span-2 flex items-center gap-3 md:col-span-4">
         <button
           type="submit"
-          :disabled="status === 'saving' || status === 'loading'"
+          :disabled="status === 'saving'"
           class="rounded-lg bg-slate-800 px-4 py-2 font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
         >
           {{ status === 'saving' ? 'Saving…' : 'Save' }}
         </button>
         <span v-if="status === 'saved'" class="text-sm text-emerald-600">✅ Saved</span>
-        <span v-if="status === 'loading'" class="text-sm text-slate-400">Loading today…</span>
       </div>
     </form>
 
@@ -165,6 +164,12 @@ async function save() {
         <div><dt class="text-slate-400">Protein</dt><dd>{{ savedRow.protein_g ?? '—' }}</dd></div>
         <div><dt class="text-slate-400">Workout</dt><dd>{{ savedRow.workout_done ? 'Yes' : 'No' }}</dd></div>
       </dl>
+      <p class="mt-3 text-xs text-slate-400">
+        Goal snapshot frozen for {{ today }}:
+        {{ savedRow.step_goal ?? '—' }} steps ·
+        {{ savedRow.calorie_goal ?? '—' }} cal ·
+        {{ savedRow.protein_goal ?? '—' }}g protein
+      </p>
     </div>
   </section>
 </template>

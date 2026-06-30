@@ -2,6 +2,8 @@
 import { useAuth } from './composables/useAuth'
 import LoginScreen from './components/LoginScreen.vue'
 import QuickEntry from './components/QuickEntry.vue'
+import StatusCards from './components/StatusCards.vue'
+import GoalsEditor from './components/GoalsEditor.vue'
 
 const { session, loading, signOut } = useAuth()
 </script>
@@ -15,7 +17,7 @@ const { session, loading, signOut } = useAuth()
   <!-- No session → login. -->
   <LoginScreen v-else-if="!session" />
 
-  <!-- Authed → placeholder dashboard (the real blocks come in step 4). -->
+  <!-- Authed → dashboard. -->
   <main v-else class="min-h-screen bg-slate-50">
     <header class="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
       <h1 class="font-bold text-slate-800">Health &amp; Fitness</h1>
@@ -29,8 +31,10 @@ const { session, loading, signOut } = useAuth()
         </button>
       </div>
     </header>
-    <div class="mx-auto max-w-4xl p-6">
+    <div class="mx-auto max-w-4xl space-y-6 p-6">
+      <StatusCards />
       <QuickEntry />
+      <GoalsEditor />
     </div>
   </main>
 </template>
