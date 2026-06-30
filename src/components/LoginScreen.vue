@@ -5,14 +5,17 @@ const { signInWithGoogle, authError } = useAuth()
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-    <div class="w-full max-w-sm rounded-xl bg-white p-8 text-center shadow ring-1 ring-slate-200">
-      <h1 class="text-xl font-bold text-slate-800">Health &amp; Fitness</h1>
-      <p class="mt-1 text-sm text-slate-500">Sign in to your dashboard</p>
+  <main class="flex min-h-screen items-center justify-center bg-canvas p-6 dark:bg-night">
+    <div class="relative w-full max-w-sm overflow-hidden rounded-3xl bg-white p-10 text-center shadow-xl ring-1 ring-slate-100 dark:bg-surf-dark dark:shadow-none dark:ring-white/10">
+      <div class="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-gradient-to-br from-brand to-cyan-400 opacity-20 blur-2xl dark:opacity-30"></div>
+      <div class="relative">
+        <div class="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-cyan-400 text-xl">🔥</div>
+        <h1 class="font-display text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Health &amp; Fitness</h1>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Your daily score, in one place.</p>
 
       <button
         @click="signInWithGoogle"
-        class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 font-medium text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
+        class="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:border-slate-300 hover:shadow dark:bg-white/5 dark:text-white dark:ring-white/15 dark:hover:bg-white/10"
       >
         <svg class="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -23,12 +26,13 @@ const { signInWithGoogle, authError } = useAuth()
         Continue with Google
       </button>
 
-      <p
-        v-if="authError"
-        class="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200"
-      >
-        {{ authError }}
-      </p>
+        <p
+          v-if="authError"
+          class="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20"
+        >
+          {{ authError }}
+        </p>
+      </div>
     </div>
   </main>
 </template>

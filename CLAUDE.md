@@ -21,16 +21,23 @@ Use the **v4 plugin flow**, NOT the legacy v3 PostCSS flow.
 ## Architecture
 - **One long scrolling dashboard** (Notion-style), single page.
 - Same blocks on every device; CSS reflows them by width (Tailwind breakpoint prefixes, e.g. `md:grid-cols-4`).
-- Block order is by **importance**, identical across devices:
+- Scrolling dashboard blocks, by **importance**, identical across devices:
   1. Today's status cards — steps/cal/protein vs goal, workout streak ("the score")
-  2. Quick entry — today's weight / steps / calories / protein + workout toggle
-  3. Weight trend — line chart
-  4. Daily steps — bar chart
-  5. Food swaps — list
-  6. Journal — posts
-  7. Goals editor — current targets (settings-style, bottom of page)
+  2. Weight trend — line chart
+  3. Daily steps — bar chart
+  4. Food swaps — list
+  5. Journal — posts
+- **Quick entry + Goals editor live in a modal**, not the scroll: opened by a
+  "＋ Log today" button in the **sticky nav** header, both stacked in one box over
+  a shaded overlay (reusable `Modal.vue`). Logging there updates the dashboard
+  cards/charts live behind it (shared `useDailyLog` cache).
 - **Review-first, all devices** (revised from the original entry-first plan, 2026-06-30): the owner wants to *see how today is tracking throughout the day*, so the daily score sits on top and entry lives just below it. Entry stays reachable, not dominant.
 - **Gamification is a primary design goal.** The owner is motivated by the daily score and by seeing the same data rendered *multiple ways* (today's stat cards, weight line chart, step bar chart, streak). Favor feedback that makes progress feel visible and rewarding — progress bars, streaks, goal-vs-actual color states (green = good, red = over a ceiling). Goal direction matters: floors (steps, protein) reward reaching/beating; ceilings (calories) reward staying at/under.
+
+## Design system — "Momentum" (light + dark)
+- **Tokens** live in `src/style.css` via Tailwind v4 `@theme`: `--font-display` (Bricolage Grotesque, used for headings/numbers via `font-display`), `--font-sans` (Inter, body); brand `--color-brand` #6366f1 (`brand`), `--color-brand-strong`, `--color-brand-soft` (#818cf8, brighter for dark); `--color-canvas` (light bg), `--color-night` (dark bg), `--color-surf-dark` (dark card). Fonts loaded via `<link>` in `index.html`.
+- **Signature:** the workout streak rendered as a violet→cyan gradient "score" card (`StatusCards.vue`). Brand color = violet/indigo; semantic green=good / red=over-ceiling is preserved separately. Cards: `rounded-2xl bg-white ring-1 ring-slate-100` (light) / `dark:bg-surf-dark dark:ring-white/10`.
+- **Dark mode:** class-based — `@custom-variant dark (&:where(.dark,.dark *))` + a `.dark` class on `<html>`. An anti-FOUC inline script in `index.html` sets it pre-paint from `localStorage('theme')` / system pref; `useTheme.js` mirrors + toggles it (sun/moon button in nav). **Chart.js colors aren't CSS** — WeightChart/StepsChart take `isDark` and switch tick/grid/series colors in computed options.
 
 ## Data model (already built in Supabase)
 Four tables. Convention: every table has `created_at timestamptz default now()` and a `user_id` auto-stamped via `default auth.uid()` (except `goals`, see below).

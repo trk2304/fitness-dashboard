@@ -61,35 +61,37 @@ async function save() {
 </script>
 
 <template>
-  <section class="rounded-xl bg-white p-6 shadow ring-1 ring-slate-200">
-    <h2 class="text-lg font-bold text-slate-800">Goals</h2>
-    <p class="mt-1 text-sm text-slate-400">Your current targets. New daily entries snapshot these.</p>
+  <div class="border-t border-slate-200 pt-6 dark:border-white/10">
+    <h2 class="font-display text-lg font-bold text-slate-900 dark:text-white">Daily goal targets</h2>
+    <p class="mt-1 text-sm text-slate-400">
+      The limits each day is measured against. Changes apply to days you log from here on.
+    </p>
 
     <form @submit.prevent="save" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
       <label class="flex flex-col gap-1 text-sm">
-        <span class="font-medium text-slate-600">Daily steps</span>
+        <span class="font-medium text-slate-600 dark:text-slate-300">Daily steps</span>
         <input
           v-model.number="form.step_goal"
           type="number" inputmode="numeric" placeholder="—"
-          class="rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-500 focus:outline-none"
+          class="rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-500 focus:outline-none dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
         />
       </label>
 
       <label class="flex flex-col gap-1 text-sm">
-        <span class="font-medium text-slate-600">Daily calories</span>
+        <span class="font-medium text-slate-600 dark:text-slate-300">Daily calories</span>
         <input
           v-model.number="form.calorie_goal"
           type="number" inputmode="numeric" placeholder="—"
-          class="rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-500 focus:outline-none"
+          class="rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-500 focus:outline-none dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
         />
       </label>
 
       <label class="flex flex-col gap-1 text-sm">
-        <span class="font-medium text-slate-600">Daily protein (g)</span>
+        <span class="font-medium text-slate-600 dark:text-slate-300">Daily protein (g)</span>
         <input
           v-model.number="form.protein_goal"
           type="number" inputmode="numeric" placeholder="—"
-          class="rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-500 focus:outline-none"
+          class="rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-500 focus:outline-none dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
         />
       </label>
 
@@ -97,17 +99,17 @@ async function save() {
         <button
           type="submit"
           :disabled="status === 'saving' || status === 'loading'"
-          class="rounded-lg bg-slate-800 px-4 py-2 font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
+          class="rounded-lg bg-brand px-4 py-2 font-medium text-white transition hover:bg-brand-strong disabled:opacity-50"
         >
           {{ status === 'saving' ? 'Saving…' : 'Save goals' }}
         </button>
-        <span v-if="status === 'saved'" class="text-sm text-emerald-600">✅ Saved</span>
+        <span v-if="status === 'saved'" class="text-sm text-emerald-600 dark:text-emerald-400">✅ Saved</span>
         <span v-if="status === 'loading'" class="text-sm text-slate-400">Loading…</span>
       </div>
     </form>
 
-    <p v-if="status === 'error'" class="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200">
+    <p v-if="status === 'error'" class="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">
       {{ errorMsg }}
     </p>
-  </section>
+  </div>
 </template>
