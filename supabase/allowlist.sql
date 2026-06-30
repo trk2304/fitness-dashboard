@@ -20,6 +20,11 @@ insert into public.allowed_emails (email, note)
 values ('tkilpatrick2304@gmail.com', 'owner')
 on conflict (email) do nothing;
 
+-- Friend access — replace the placeholder email, then uncomment and run:
+-- insert into public.allowed_emails (email, note)
+-- values ('REPLACE_WITH_HER_EMAIL@gmail.com', 'friend')
+-- on conflict (email) do nothing;
+
 -- 3. Lock the table down from the API. Enabling RLS with NO policies makes
 --    it invisible to the anon/authenticated roles (so no one can read or
 --    edit the allowlist through the app). The trigger below still reads it,
