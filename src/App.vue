@@ -104,7 +104,7 @@ const greeting = computed(() => greetings[greetingIndex](firstName.value))
     </div>
 
     <!-- Log Today + Goals, together in one modal over a shaded overlay. -->
-    <Modal :open="entryOpen" size="lg" title="Log today" @close="entryOpen = false">
+    <Modal :open="entryOpen" size="lg" title="Log entry" @close="entryOpen = false">
       <div class="space-y-6">
         <QuickEntry />
         <GoalsEditor />
