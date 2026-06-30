@@ -1,6 +1,7 @@
 <script setup>
 import { useAuth } from './composables/useAuth'
 import LoginScreen from './components/LoginScreen.vue'
+import QuickEntry from './components/QuickEntry.vue'
 
 const { session, loading, signOut } = useAuth()
 </script>
@@ -28,6 +29,8 @@ const { session, loading, signOut } = useAuth()
         </button>
       </div>
     </header>
-    <div class="p-6 text-slate-500">Signed in. The dashboard goes here next.</div>
+    <div class="mx-auto max-w-4xl p-6">
+      <QuickEntry />
+    </div>
   </main>
 </template>
