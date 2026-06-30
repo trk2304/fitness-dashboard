@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAuth } from './composables/useAuth'
 import { useTheme } from './composables/useTheme'
 import LoginScreen from './components/LoginScreen.vue'
@@ -15,8 +15,23 @@ import Modal from './components/Modal.vue'
 const { session, loading, signOut } = useAuth()
 const { isDark, toggleTheme } = useTheme()
 
-// Entry/Goals now live in a modal opened from the sticky nav.
+// Entry/Goals live in a modal opened from the nav.
 const entryOpen = ref(false)
+// Mobile slide-out nav.
+const navOpen = ref(false)
+
+watch(navOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+
+function openEntry() {
+  navOpen.value = false
+  entryOpen.value = true
+}
+function doSignOut() {
+  navOpen.value = false
+  signOut()
+}
 
 // First name from the Google account (Supabase stamps OAuth profile fields into
 // user_metadata), with graceful fallbacks if given_name is ever absent.
@@ -69,7 +84,9 @@ const greeting = computed(() => greetings[greetingIndex](firstName.value))
           Health &amp; Fitness
         </span>
       </div>
-      <div class="flex items-center gap-2 text-sm">
+
+      <!-- Desktop: inline actions -->
+      <div class="hidden items-center gap-2 text-sm md:flex">
         <button
           @click="entryOpen = true"
           class="rounded-xl bg-gradient-to-br from-brand to-cyan-400 px-4 py-2 font-semibold text-white shadow-sm transition hover:opacity-90"
@@ -90,6 +107,24 @@ const greeting = computed(() => greetings[greetingIndex](firstName.value))
           Sign out
         </button>
       </div>
+
+      <!-- Mobile: hamburger (custom asymmetric-bars mark in a gradient tile) -->
+      <button
+        @click="navOpen = !navOpen"
+        class="rounded-xl bg-gradient-to-br from-brand to-cyan-400 p-2.5 text-white shadow-sm md:hidden"
+        :aria-label="navOpen ? 'Close menu' : 'Open menu'"
+        :aria-expanded="navOpen"
+      >
+        <svg v-if="!navOpen" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="15" y2="12" />
+          <line x1="4" y1="17" x2="11" y2="17" />
+        </svg>
+        <svg v-else class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="6" y1="6" x2="18" y2="18" />
+          <line x1="18" y1="6" x2="6" y2="18" />
+        </svg>
+      </button>
     </header>
 
     <div class="mx-auto max-w-4xl space-y-6 p-6">
@@ -103,6 +138,52 @@ const greeting = computed(() => greetings[greetingIndex](firstName.value))
       <Journal />
     </div>
 
+    <!-- Mobile slide-out nav -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="navOpen"
+          class="fixed inset-0 z-50 bg-slate-900/50 md:hidden"
+          @click="navOpen = false"
+        ></div>
+      </Transition>
+      <Transition name="slide">
+        <aside
+          v-if="navOpen"
+          class="fixed right-0 top-0 z-50 flex h-full w-64 flex-col gap-2 bg-white p-4 shadow-xl dark:bg-surf-dark md:hidden"
+        >
+          <div class="mb-2 flex items-center justify-between">
+            <span class="font-display font-bold text-slate-900 dark:text-white">Menu</span>
+            <button
+              @click="navOpen = false"
+              aria-label="Close menu"
+              class="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+          <button
+            @click="openEntry"
+            class="w-full rounded-xl bg-gradient-to-br from-brand to-cyan-400 px-4 py-3 text-left font-semibold text-white"
+          >
+            ＋ Log today
+          </button>
+          <button
+            @click="toggleTheme"
+            class="w-full rounded-xl px-4 py-3 text-left font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100 dark:text-slate-200 dark:ring-white/15 dark:hover:bg-white/10"
+          >
+            {{ isDark ? '☀️ Light mode' : '🌙 Dark mode' }}
+          </button>
+          <button
+            @click="doSignOut"
+            class="w-full rounded-xl px-4 py-3 text-left font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100 dark:text-slate-200 dark:ring-white/15 dark:hover:bg-white/10"
+          >
+            Sign out
+          </button>
+        </aside>
+      </Transition>
+    </Teleport>
+
     <!-- Log Today + Goals, together in one modal over a shaded overlay. -->
     <Modal :open="entryOpen" size="lg" title="Log entry" @close="entryOpen = false">
       <div class="space-y-6">
@@ -112,3 +193,22 @@ const greeting = computed(() => greetings[greetingIndex](firstName.value))
     </Modal>
   </main>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.25s ease;
+}
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(100%);
+}
+</style>

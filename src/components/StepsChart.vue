@@ -74,7 +74,8 @@ const chartOptions = computed(() => {
     scales: {
       x: {
         grid: { display: false },
-        ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8, color: tick },
+        // Up to 45° so dates angle instead of overlapping on narrow mobile.
+        ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, color: tick },
       },
       y: { beginAtZero: true, ticks: { precision: 0, color: tick }, grid: { color: grid } },
     },

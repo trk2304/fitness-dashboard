@@ -83,7 +83,9 @@ const chartOptions = computed(() => {
           tooltipFormat: 'MMM d, yyyy',
           displayFormats: { day: 'ddMMMyy', week: 'ddMMMyy', month: 'ddMMMyy' },
         },
-        ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8, color: tick },
+        // Allow up to 45° so labels angle (not overlap) when space is tight on
+        // mobile, while staying flat on wider screens where they fit.
+        ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, color: tick },
         grid: { display: false },
       },
       y: { beginAtZero: false, ticks: { color: tick }, grid: { color: grid } },
