@@ -5,6 +5,7 @@ import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip } fro
 import { format } from 'date-fns'
 import { useDailyLog } from '../composables/useDailyLog'
 import { useTheme } from '../composables/useTheme'
+import { dayBins } from '../lib/dailyBars'
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip)
 
@@ -21,37 +22,23 @@ const rangeDays = ref(7)
 
 const hasAnyCalories = computed(() => rows.value.some((r) => r.calories != null))
 
-// One slot per calendar day across the range. Unlike StepsChart (which fills
-// gaps with 0 — an honest "you walked zero" for a floor metric), an unlogged
-// calorie day is *unknown*, not "ate zero". Filling it with 0 would paint a
-// false green "under ceiling" success, so missing days stay null → no bar.
-const days = computed(() => {
-  const byDate = new Map(rows.value.map((r) => [r.entry_date, r]))
-  const end = new Date(today + 'T00:00:00')
-
-  let start
-  if (rangeDays.value == null) {
-    const earliest = rows.value.map((r) => r.entry_date).sort()[0]
-    start = new Date((earliest ?? today) + 'T00:00:00')
-  } else {
-    start = new Date(today + 'T00:00:00')
-    start.setDate(start.getDate() - (rangeDays.value - 1))
-  }
-
-  const out = []
-  for (const cur = new Date(start); cur <= end; cur.setDate(cur.getDate() + 1)) {
-    const r = byDate.get(format(cur, 'yyyy-MM-dd'))
-    out.push({ date: new Date(cur), calories: r?.calories ?? null, goal: r?.calorie_goal ?? null })
-  }
-  return out
-})
+// One slot per calendar day across the range. fill=null (not 0): an unlogged
+// calorie day is *unknown*, not "ate zero" — a 0 would paint a false green
+// "under ceiling" success, so missing days stay null and render as no bar.
+const days = computed(() =>
+  dayBins(rows.value, today, rangeDays.value, {
+    field: 'calories',
+    goalField: 'calorie_goal',
+    fill: null,
+  })
+)
 
 // Calories is a CEILING (see CLAUDE.md): green when at/under goal, red when
 // over. Inverts StepsChart's floor logic. Null days and days without a goal
 // snapshot get the neutral color (and null days render as no bar anyway).
 const barColor = (d) => {
-  if (d.calories == null || d.goal == null) return isDark.value ? '#3b4252' : '#c7d2fe'
-  return d.calories <= d.goal ? '#10b981' : '#ef4444'
+  if (d.value == null || d.goal == null) return isDark.value ? '#3b4252' : '#c7d2fe'
+  return d.value <= d.goal ? '#10b981' : '#ef4444'
 }
 
 const chartData = computed(() => ({
@@ -59,7 +46,7 @@ const chartData = computed(() => ({
   datasets: [
     {
       label: 'Calories',
-      data: days.value.map((d) => d.calories),
+      data: days.value.map((d) => d.value),
       backgroundColor: days.value.map(barColor),
       borderRadius: 4,
     },

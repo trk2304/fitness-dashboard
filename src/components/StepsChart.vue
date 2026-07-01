@@ -5,6 +5,7 @@ import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip } fro
 import { format } from 'date-fns'
 import { useDailyLog } from '../composables/useDailyLog'
 import { useTheme } from '../composables/useTheme'
+import { dayBins } from '../lib/dailyBars'
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip)
 
@@ -21,37 +22,20 @@ const rangeDays = ref(7)
 
 const hasAnySteps = computed(() => rows.value.some((r) => r.steps != null))
 
-// One entry per calendar day across the range (missing days filled with 0), so
-// the bars form a continuous "consistency calendar" rather than hiding gaps.
-const days = computed(() => {
-  const byDate = new Map(rows.value.map((r) => [r.entry_date, r]))
-  const end = new Date(today + 'T00:00:00')
+// One slot per calendar day across the range. fill=0 because a skipped day is an
+// honest "you walked none" for a floor metric — the gap belongs in the streak.
+const days = computed(() =>
+  dayBins(rows.value, today, rangeDays.value, { field: 'steps', goalField: 'step_goal', fill: 0 })
+)
 
-  let start
-  if (rangeDays.value == null) {
-    const earliest = rows.value.map((r) => r.entry_date).sort()[0]
-    start = new Date((earliest ?? today) + 'T00:00:00')
-  } else {
-    start = new Date(today + 'T00:00:00')
-    start.setDate(start.getDate() - (rangeDays.value - 1))
-  }
-
-  const out = []
-  for (const cur = new Date(start); cur <= end; cur.setDate(cur.getDate() + 1)) {
-    const r = byDate.get(format(cur, 'yyyy-MM-dd'))
-    out.push({ date: new Date(cur), steps: r?.steps ?? 0, goal: r?.step_goal ?? null })
-  }
-  return out
-})
-
-const metGoal = (d) => d.goal != null && d.steps >= d.goal
+const metGoal = (d) => d.goal != null && d.value >= d.goal
 
 const chartData = computed(() => ({
   labels: days.value.map((d) => format(d.date, 'ddMMMyy')),
   datasets: [
     {
       label: 'Steps',
-      data: days.value.map((d) => d.steps),
+      data: days.value.map((d) => d.value),
       // green when the day hit its step goal (a floor), brand violet otherwise.
       backgroundColor: days.value.map((d) =>
         metGoal(d) ? '#10b981' : isDark.value ? '#3b4252' : '#c7d2fe'
