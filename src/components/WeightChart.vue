@@ -150,9 +150,11 @@ const chartOptions = computed(() => {
 
 <template>
   <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 dark:bg-surf-dark dark:shadow-none dark:ring-white/10">
-    <div class="flex items-center justify-between">
+    <!-- Header stacks vertically on phones so the title, Calories toggle and range
+         buttons each get room; switches to a single justified row at sm and up. -->
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h2 class="font-display text-lg font-bold text-slate-900 dark:text-white">Weight trend</h2>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <!-- Overlay toggle: amber to match the calorie line/axis it reveals. -->
         <button
           @click="showCalories = !showCalories"
