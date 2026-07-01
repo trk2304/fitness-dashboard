@@ -6,6 +6,7 @@ import LoginScreen from './components/LoginScreen.vue'
 import StatusCards from './components/StatusCards.vue'
 import WeightChart from './components/WeightChart.vue'
 import StepsChart from './components/StepsChart.vue'
+import CalorieChart from './components/CalorieChart.vue'
 import FoodSwaps from './components/FoodSwaps.vue'
 import Journal from './components/Journal.vue'
 import QuickEntry from './components/QuickEntry.vue'
@@ -134,6 +135,7 @@ const greeting = computed(() => greetings[greetingIndex](firstName.value))
       <StatusCards />
       <WeightChart />
       <StepsChart />
+      <CalorieChart />
       <FoodSwaps />
       <Journal />
     </div>

@@ -20,26 +20,34 @@ const ranges = [
 ]
 const rangeDays = ref(7)
 
-const hasAnySteps = computed(() => rows.value.some((r) => r.steps != null))
+const hasAnyCalories = computed(() => rows.value.some((r) => r.calories != null))
 
-// One slot per calendar day across the range. fill=0 because a skipped day is an
-// honest "you walked none" for a floor metric — the gap belongs in the streak.
+// One slot per calendar day across the range. fill=null (not 0): an unlogged
+// calorie day is *unknown*, not "ate zero" — a 0 would paint a false green
+// "under ceiling" success, so missing days stay null and render as no bar.
 const days = computed(() =>
-  dayBins(rows.value, today, rangeDays.value, { field: 'steps', goalField: 'step_goal', fill: 0 })
+  dayBins(rows.value, today, rangeDays.value, {
+    field: 'calories',
+    goalField: 'calorie_goal',
+    fill: null,
+  })
 )
 
-const metGoal = (d) => d.goal != null && d.value >= d.goal
+// Calories is a CEILING (see CLAUDE.md): green when at/under goal, red when
+// over. Inverts StepsChart's floor logic. Null days and days without a goal
+// snapshot get the neutral color (and null days render as no bar anyway).
+const barColor = (d) => {
+  if (d.value == null || d.goal == null) return isDark.value ? '#3b4252' : '#c7d2fe'
+  return d.value <= d.goal ? '#10b981' : '#ef4444'
+}
 
 const chartData = computed(() => ({
   labels: days.value.map((d) => format(d.date, 'ddMMMyy')),
   datasets: [
     {
-      label: 'Steps',
+      label: 'Calories',
       data: days.value.map((d) => d.value),
-      // green when the day hit its step goal (a floor), brand violet otherwise.
-      backgroundColor: days.value.map((d) =>
-        metGoal(d) ? '#10b981' : isDark.value ? '#3b4252' : '#c7d2fe'
-      ),
+      backgroundColor: days.value.map(barColor),
       borderRadius: 4,
     },
   ],
@@ -53,7 +61,7 @@ const chartOptions = computed(() => {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: { callbacks: { label: (c) => `${c.parsed.y.toLocaleString()} steps` } },
+      tooltip: { callbacks: { label: (c) => `${c.parsed.y.toLocaleString()} cal` } },
     },
     scales: {
       x: {
@@ -70,7 +78,7 @@ const chartOptions = computed(() => {
 <template>
   <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 dark:bg-surf-dark dark:shadow-none dark:ring-white/10">
     <div class="flex items-center justify-between">
-      <h2 class="font-display text-lg font-bold text-slate-900 dark:text-white">Daily steps</h2>
+      <h2 class="font-display text-lg font-bold text-slate-900 dark:text-white">Calorie trend</h2>
       <div class="flex gap-1">
         <button
           v-for="r in ranges"
@@ -88,11 +96,11 @@ const chartOptions = computed(() => {
       </div>
     </div>
 
-    <div v-if="hasAnySteps" class="mt-4 h-64">
+    <div v-if="hasAnyCalories" class="mt-4 h-64">
       <Bar :data="chartData" :options="chartOptions" />
     </div>
     <p v-else class="mt-4 flex h-64 items-center justify-center text-sm text-slate-400">
-      Log your steps to see daily activity.
+      Log your calories to see intake over time.
     </p>
   </section>
 </template>

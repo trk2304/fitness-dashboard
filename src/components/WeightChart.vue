@@ -28,28 +28,50 @@ const ranges = [
   { label: 'All', days: null },
 ]
 const rangeDays = ref(30)
+// Opt-in overlay: superimpose calorie intake on a second axis to eyeball how
+// eating tracks against the scale. Off by default — weight trend stays clean.
+const showCalories = ref(false)
 
 const hasAnyWeight = computed(() => rows.value.some((r) => r.weight_lbs != null))
 
-// Points as {x: Date, y: weight}. x is a real Date (local midnight) so the time
-// axis spaces them proportionally — skipped days show an honest gap.
-const points = computed(() => {
-  const withWeight = rows.value
-    .filter((r) => r.weight_lbs != null)
-    .map((r) => ({ x: new Date(r.entry_date + 'T00:00:00'), y: r.weight_lbs }))
-    .sort((a, b) => a.x - b.x)
-
-  if (rangeDays.value == null) return withWeight
-  const cutoff = new Date(today + 'T00:00:00')
-  cutoff.setDate(cutoff.getDate() - (rangeDays.value - 1))
-  return withWeight.filter((p) => p.x >= cutoff)
+// Start of the visible window (null = all time). Both series filter by this so
+// weight and calories always cover the same date span when overlaid.
+const cutoff = computed(() => {
+  if (rangeDays.value == null) return null
+  const c = new Date(today + 'T00:00:00')
+  c.setDate(c.getDate() - (rangeDays.value - 1))
+  return c
 })
+
+// Build {x: Date, y} points for a numeric field, dropping unlogged days. x is a
+// real Date (local midnight) so the TIME axis spaces points proportionally —
+// skipped days show an honest gap, and calories align to weight by actual date
+// (not by index), so mismatched logging days never smear.
+function seriesFor(field) {
+  const pts = rows.value
+    .filter((r) => r[field] != null)
+    .map((r) => ({ x: new Date(r.entry_date + 'T00:00:00'), y: r[field] }))
+    .sort((a, b) => a.x - b.x)
+  return cutoff.value ? pts.filter((p) => p.x >= cutoff.value) : pts
+}
+
+const points = computed(() => seriesFor('weight_lbs'))
+const caloriePoints = computed(() => seriesFor('calories'))
+
+// Chart renders if either series has something to show in the window.
+const hasData = computed(
+  () => points.value.length > 0 || (showCalories.value && caloriePoints.value.length > 0)
+)
 
 // Brand line, brighter on dark surfaces for contrast.
 const lineColor = computed(() => (isDark.value ? '#818cf8' : '#6366f1'))
 
-const chartData = computed(() => ({
-  datasets: [
+// Amber for calories — clearly distinct from the violet weight line, and not a
+// semantic green/red (those are reserved for goal states on the bar charts).
+const calorieColor = '#f59e0b'
+
+const chartData = computed(() => {
+  const datasets = [
     {
       label: 'Weight (lbs)',
       data: points.value,
@@ -60,9 +82,25 @@ const chartData = computed(() => ({
       pointRadius: 3,
       pointHoverRadius: 5,
       pointBackgroundColor: lineColor.value,
+      yAxisID: 'y',
     },
-  ],
-}))
+  ]
+  if (showCalories.value) {
+    datasets.push({
+      label: 'Calories',
+      data: caloriePoints.value,
+      borderColor: calorieColor,
+      backgroundColor: calorieColor,
+      fill: false,
+      tension: 0.3,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: calorieColor,
+      yAxisID: 'y1', // second axis — calories (~2000) dwarf lbs (~180) otherwise
+    })
+  }
+  return { datasets }
+})
 
 const chartOptions = computed(() => {
   const tick = isDark.value ? '#94a3b8' : '#94a3b8'
@@ -72,7 +110,14 @@ const chartOptions = computed(() => {
     maintainAspectRatio: false, // fill the fixed-height container, don't overflow
     plugins: {
       legend: { display: false },
-      tooltip: { callbacks: { label: (c) => `${c.parsed.y} lbs` } },
+      tooltip: {
+        callbacks: {
+          label: (c) =>
+            c.dataset.yAxisID === 'y1'
+              ? `${c.parsed.y.toLocaleString()} cal`
+              : `${c.parsed.y} lbs`,
+        },
+      },
     },
     scales: {
       x: {
@@ -89,6 +134,15 @@ const chartOptions = computed(() => {
         grid: { display: false },
       },
       y: { beginAtZero: false, ticks: { color: tick }, grid: { color: grid } },
+      // Right-hand calorie axis, only present when the overlay is on. drawn
+      // without its own gridlines so it doesn't double up on the weight grid.
+      y1: {
+        display: showCalories.value,
+        position: 'right',
+        beginAtZero: true,
+        ticks: { color: calorieColor, precision: 0 },
+        grid: { drawOnChartArea: false },
+      },
     },
   }
 })
@@ -98,24 +152,39 @@ const chartOptions = computed(() => {
   <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 dark:bg-surf-dark dark:shadow-none dark:ring-white/10">
     <div class="flex items-center justify-between">
       <h2 class="font-display text-lg font-bold text-slate-900 dark:text-white">Weight trend</h2>
-      <div class="flex gap-1">
+      <div class="flex items-center gap-2">
+        <!-- Overlay toggle: amber to match the calorie line/axis it reveals. -->
         <button
-          v-for="r in ranges"
-          :key="r.label"
-          @click="rangeDays = r.days"
+          @click="showCalories = !showCalories"
           class="rounded-md px-2.5 py-1 text-xs font-medium transition"
           :class="
-            rangeDays === r.days
-              ? 'bg-brand text-white'
-              : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10'
+            showCalories
+              ? 'bg-amber-500 text-white'
+              : 'text-slate-500 ring-1 ring-slate-200 hover:bg-slate-100 dark:text-slate-400 dark:ring-white/15 dark:hover:bg-white/10'
           "
+          :aria-pressed="showCalories"
         >
-          {{ r.label }}
+          ＋ Calories
         </button>
+        <div class="flex gap-1">
+          <button
+            v-for="r in ranges"
+            :key="r.label"
+            @click="rangeDays = r.days"
+            class="rounded-md px-2.5 py-1 text-xs font-medium transition"
+            :class="
+              rangeDays === r.days
+                ? 'bg-brand text-white'
+                : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10'
+            "
+          >
+            {{ r.label }}
+          </button>
+        </div>
       </div>
     </div>
 
-    <div v-if="points.length" class="mt-4 h-64">
+    <div v-if="hasData" class="mt-4 h-64">
       <Line :data="chartData" :options="chartOptions" />
     </div>
     <p v-else class="mt-4 flex h-64 items-center justify-center text-sm text-slate-400">
